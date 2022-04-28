@@ -1,5 +1,5 @@
 # Yarn-Selective-Upgrade
-This allows selectively upgrading NPM packages.
+This allows selectively upgrading NPM packages grouped by upgrade type: major, minor, patch, release, prerel, build.
 
 Installation
 -----
