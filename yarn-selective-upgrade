@@ -432,22 +432,39 @@ upgrade_text() {
 function command_upgrade {
 	upgrade_type="${1:-"patch"}"
 	interactive="${2:-""}"
+	header_found=0
 
 	yarn outdated | while read -r line; do
-		if [[ $line == *"http:"* || $line == *"https:"* ]]; then
-			IFS=' ' read -r -a arr <<<"$line"
+		if [[ 'PackageCurrentWantedLatestPackageTypeURL' == "${line//[[:blank:]]/}" ]]; then
+			header_found=1
+			continue
+		fi
 
-			package="${arr[0]}"
-			current_version="${arr[1]}"
-			latest_version="${arr[3]}"
-			diff_version=$(command_diff "$current_version" "$latest_version")
+		if [[ $header_found -ne 1 ]]; then
+			continue
+		fi
 
-			if [ "$diff_version" == "$upgrade_type" ]; then
+		IFS=' ' read -r -e -a parts <<<"$line"
+
+		if [[ ${#parts[@]} -ne 6 ]]; then
+			continue
+		fi
+
+		package="${parts[0]}"
+		current_version="${parts[1]}"
+		latest_version="${parts[3]}"
+		package_type="${parts[4]}"
+
+		if [[ "$current_version" =~ $SEMVER_REGEX ]] && [[ "$latest_version" =~ $SEMVER_REGEX ]]; then
+			diff_type=$(command_diff "$current_version" "$latest_version")
+
+			if [ "$diff_type" == "$upgrade_type" ]; then
 				upgrade_text "$package" "$current_version" "$latest_version"
 
 				package_json="$(pwd)/package.json"
-				echo -e "➤ Package.json: ${color_green}${package_json}${color_clear}"
-				echo -e "➤ Command     : ${color_green}yarn upgrade ""${package}"@"${latest_version}""${color_clear}"
+				echo -e "➤ Package.json    : ${color_green}${package_json}${color_clear}"
+				echo -e "➤ Package Type    : ${color_green}${package_type}${color_clear}"
+				echo -e "➤ Upgrade Command : ${color_green}yarn upgrade ""${package}"@"${latest_version}""${color_clear}"
 
 				if [[ "$interactive" == "--interactive" || "$interactive" == "-i" ]]; then
 					echo
