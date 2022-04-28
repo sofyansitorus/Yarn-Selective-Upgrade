@@ -17,9 +17,37 @@ curl -o /usr/local/bin/yarn-selective-upgrade \
 chmod +x /usr/local/bin/yarn-selective-upgrade
 ```
 
-#### ➤ Check if it works, run command below in your package.json directory.
+#### ➤ Check if it works.
 ```bash
 yarn-selective-upgrade --help
+```
+
+How to Use
+-----
+This command need to be run in your package.json directory.
+
+#### ➤ Major upgrade.
+```bash
+yarn-selective-upgrade major
+```
+
+#### ➤ Minor upgrade.
+```bash
+yarn-selective-upgrade minor
+```
+
+#### ➤ Patch upgrade.
+```bash
+yarn-selective-upgrade patch
+```
+
+#### ➤ Intercative mode.
+```bash
+yarn-selective-upgrade major -i
+```
+
+```bash
+yarn-selective-upgrade major --intercative
 ```
 
 # Credits
