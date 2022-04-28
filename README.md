@@ -6,18 +6,18 @@ Installation
 
 The Yarn-Selective-Upgrade tool can be downloaded from github, made executable and added to your path with these commands:
 
-#### ➤ Download the script and save it to /usr/local/bin
+#### ➤ Download the script and save it to /usr/local/bin.
 ```bash
 curl -o /usr/local/bin/yarn-selective-upgrade \
   https://raw.githubusercontent.com/sofyansitorus/Yarn-Selective-Upgrade/main/yarn-selective-upgrade
 ```
 
-#### ➤ Make script executable
+#### ➤ Make script executable.
 ```bash
 chmod +x /usr/local/bin/yarn-selective-upgrade
 ```
 
-#### ➤ Check if it works
+#### ➤ Check if it works, run command below in your package.json directory.
 ```bash
 yarn-selective-upgrade --help
 ```
