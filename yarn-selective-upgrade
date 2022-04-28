@@ -19,14 +19,13 @@ PROG_VERSION="0.0.1"
 USAGE="\
 Usage:
   $PROG major|minor|patch|release|prerel|build
-  $PROG --help|-h
 
 Arguments:
-  major|minor|patch|release|prerel|build  Upgrade type.
-  -h, --help                              Print this help message.
+  -i, --interactive Run the command in interactive mode.
 
 See also:
-  https://semver.org -- Semantic Versioning 2.0.0"
+  https://semver.org -- Semantic Versioning 2.0.0
+"
 
 function error {
 	echo -e "$1" >&2
@@ -475,10 +474,6 @@ function command_upgrade {
 }
 
 case "${1:-''}" in
---help | -h)
-	echo -e "$USAGE"
-	exit 0
-	;;
 major | minor | patch | release | prerel | build)
 	command_upgrade "$@"
 	;;
