@@ -41,13 +41,13 @@ yarn-selective-upgrade minor
 yarn-selective-upgrade patch
 ```
 
-#### ➤ Intercative mode.
+#### ➤ Interactive mode.
 ```bash
 yarn-selective-upgrade major -i
 ```
 
 ```bash
-yarn-selective-upgrade major --intercative
+yarn-selective-upgrade major --interactive
 ```
 
 # Credits
