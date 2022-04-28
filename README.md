@@ -1,5 +1,22 @@
 # Yarn-Selective-Upgrade
-This allows selectively upgrading NPM packages
+This allows selectively upgrading NPM packages.
+
+Installation
+-----
+
+The Yarn-Selective-Upgrade tool can be downloaded from github, made executable and added to your path with these commands:
+
+```bash
+# Download the script and save it to /usr/local/bin
+curl -o /usr/local/bin/yarn-selective-upgrade \
+  https://github.com/sofyansitorus/Yarn-Selective-Upgrade/blob/main/yarn-selective-upgrade
+
+# Make script executable
+chmod +x /usr/local/bin/yarn-selective-upgrade
+
+# Prove it works
+yarn-selective-upgrade --help
+```
 
 # Credits
 
