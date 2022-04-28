@@ -9,7 +9,7 @@ The Yarn-Selective-Upgrade tool can be downloaded from github, made executable a
 #### ➤ Download the script and save it to /usr/local/bin
 ```bash
 curl -o /usr/local/bin/yarn-selective-upgrade \
-  https://github.com/sofyansitorus/Yarn-Selective-Upgrade/blob/main/yarn-selective-upgrade
+  https://raw.githubusercontent.com/sofyansitorus/Yarn-Selective-Upgrade/main/yarn-selective-upgrade
 ```
 
 #### ➤ Make script executable
