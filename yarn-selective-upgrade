@@ -445,6 +445,10 @@ function command_upgrade {
 			if [ "$diff_version" == "$upgrade_type" ]; then
 				upgrade_text "$package" "$current_version" "$latest_version"
 
+				package_json="$(pwd)/package.json"
+				echo -e "➤ Package.json: ${color_green}${package_json}${color_clear}"
+				echo -e "➤ Command     : ${color_green}yarn upgrade ""${package}"@"${latest_version}""${color_clear}"
+
 				if [[ "$interactive" == "--interactive" || "$interactive" == "-i" ]]; then
 					echo
 					read -r -u 2 -p "Do you want to proceed? (yes/no) " yn
@@ -464,9 +468,6 @@ function command_upgrade {
 					esac
 				fi
 
-				package_json="$(pwd)/package.json"
-				echo -e "➤ Package.json: ${color_green}${package_json}${color_clear}"
-				echo -e "➤ Command     : ${color_green}yarn upgrade ""${package}"@"${latest_version}""${color_clear}"
 				yarn upgrade "${package}@${latest_version}"
 			fi
 		fi
