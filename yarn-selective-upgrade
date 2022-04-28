@@ -420,18 +420,19 @@ upgrade_text() {
 	package="$1"
 	version_from="$2"
 	version_to="$3"
-	str="Upgrading $package from $version_from to $version_to"
+	str="Upgrade $package from $version_from to $version_to"
 	len=$((${#str} + 8))
 	echo
 	for i in $(seq $len); do echo -n -e "${color_yellow}*${color_clear}"; done
 	echo
-	echo -e "${color_yellow}*${color_clear}   "Upgrading "${color_red}$package${color_clear}" from "${color_green}$version_from${color_clear}" to "${color_green}$version_to${color_clear}""   ${color_yellow}*${color_clear}"
+	echo -e "${color_yellow}*${color_clear}   "Upgrade "${color_red}$package${color_clear}" from "${color_green}$version_from${color_clear}" to "${color_green}$version_to${color_clear}""   ${color_yellow}*${color_clear}"
 	for i in $(seq $len); do echo -n -e "${color_yellow}*${color_clear}"; done
 	echo
 }
 
 function command_upgrade {
 	upgrade_type="${1:-"patch"}"
+	interactive="${2:-""}"
 
 	yarn outdated | while read -r line; do
 		if [[ $line == *"http:"* || $line == *"https:"* ]]; then
@@ -444,6 +445,26 @@ function command_upgrade {
 
 			if [ "$diff_version" == "$upgrade_type" ]; then
 				upgrade_text "$package" "$current_version" "$latest_version"
+
+				if [[ "$interactive" == "--interactive" || "$interactive" == "-i" ]]; then
+					echo
+					read -r -u 2 -p "Do you want to proceed? (yes/no) " yn
+
+					case $yn in
+					yes | y)
+						echo "➤ Proceeding..."
+						;;
+					no | n)
+						echo "➤ Skipping..."
+						continue
+						;;
+					*)
+						echo "➤ Invalid response! Exiting..."
+						exit 1
+						;;
+					esac
+				fi
+
 				package_json="$(pwd)/package.json"
 				echo -e "➤ Package.json: ${color_green}${package_json}${color_clear}"
 				echo -e "➤ Command     : ${color_green}yarn upgrade ""${package}"@"${latest_version}""${color_clear}"
