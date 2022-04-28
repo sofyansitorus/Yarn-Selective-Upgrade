@@ -474,6 +474,10 @@ function command_upgrade {
 }
 
 case "${1:-''}" in
+--help | -h)
+	echo -e "$USAGE"
+	exit 0
+	;;
 major | minor | patch | release | prerel | build)
 	command_upgrade "$@"
 	;;
