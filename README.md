@@ -14,12 +14,12 @@ curl -o /usr/local/bin/yarn-selective-upgrade \
 
 #### ➤ Make script executable
 ```bash
-yarn-selective-upgrade --help
+chmod +x /usr/local/bin/yarn-selective-upgrade
 ```
 
 #### ➤ Check if it works
 ```bash
-chmod +x /usr/local/bin/yarn-selective-upgrade
+yarn-selective-upgrade --help
 ```
 
 # Credits
