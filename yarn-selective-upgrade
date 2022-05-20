@@ -16,15 +16,54 @@ SEMVER_REGEX="\
 PROG=$(basename "$0")
 PROG_VERSION="0.0.1"
 
+# Color variables
+color_red='\033[0;31m'
+color_green='\033[0;32m'
+color_yellow='\033[0;33m'
+color_clear='\033[0m'
+
 USAGE="\
 Usage:
-  $PROG major|minor|patch|release|prerel|build
+
+  $PROG
 
 Arguments:
-  -i, --interactive Run the command in interactive mode.
 
-See also:
-  https://semver.org -- Semantic Versioning 2.0.0
+  -h | --help          Show the script usage help.
+
+  -w | --wizard        Run the command in wizad mode.
+
+  -d | --debug         Run the command in debug mode. No actual upgrade will be made.
+
+  -c | --confirm       Ask confirmation before the upgrade command executed and allow manual input for the targetted upgrade version.
+
+  -u | --upgrade_type  Filter upgrade to specified upgrade type based on semver specification. Possible values: major, minor, patch, release, prerel, build, all. Default is all.
+
+                       Example: ${color_yellow}--upgrade_type patch${color_clear}
+
+  -p | --package_type  Filter upgrade to specified package type. Possible values: dependencies, devDependencies, all. Default is all.
+
+                       Example: ${color_yellow}--package_type dependencies${color_clear}
+
+  -e | --excludes      Filter upgrade to dissallow the upgrade for packages defined in the list. Separate the package name by comma for multiple packages. Use asterisk (*) for wildcard pattern.
+
+                       Example: ${color_yellow}--excludes \"react,react-dom\"${color_clear}
+
+                       Will match \"react\" and \"react-dom\" package.
+
+                       Example: ${color_yellow}--excludes \"@bable/*\"${color_clear}
+
+                       Will match all packages that start with \"@bable/\".
+
+  -i | --includes      Filter upgrade to allow the upgrade only for packages defined in the list. Separate the package name by comma for multiple packages. Use asterisk (*) for wildcard pattern.
+
+                       Example: ${color_yellow}--includes \"react,react-dom\"${color_clear}
+
+                       Will match \"react\" and \"react-dom\" package.
+
+                       Example: ${color_yellow}--includes \"@bable/*\"${color_clear}
+
+                       Will match all packages that start with \"@bable/\".
 "
 
 function error {
@@ -409,38 +448,58 @@ function command_validate {
 	exit 0
 }
 
-# Color variables
-color_red='\033[0;31m'
-color_green='\033[0;32m'
-color_yellow='\033[0;33m'
-color_clear='\033[0m'
+function match_pattern {
+	local needle="$1"
+	local list="$2"
+	local match="no"
 
-upgrade_text() {
-	package="$1"
-	version_from="$2"
-	version_to="$3"
-	str="Upgrade $package from $version_from to $version_to"
-	len=$((${#str} + 8))
-	echo
-	for i in $(seq $len); do echo -n -e "${color_yellow}*${color_clear}"; done
-	echo
-	echo -e "${color_yellow}*${color_clear}   "Upgrade "${color_red}$package${color_clear}" from "${color_green}$version_from${color_clear}" to "${color_green}$version_to${color_clear}""   ${color_yellow}*${color_clear}"
-	for i in $(seq $len); do echo -n -e "${color_yellow}*${color_clear}"; done
-	echo
+	IFS=','
+
+	read -ra array <<<"$list"
+
+	for e in "${array[@]}"; do
+		char_first=${e:0:1}
+		char_last=${e: -1}
+
+		if [ "$char_first" = "*" ] && [ "$char_last" = "*" ]; then
+			if [[ "$needle" == *"${e:1:-1}"* ]]; then
+				match="yes"
+			fi
+		elif [ "$char_first" = "*" ]; then
+			if [[ "$needle" == *"${e:1}" ]]; then
+				match="yes"
+			fi
+		elif [ "$char_last" = "*" ]; then
+			if [[ "$needle" == "${e:0:-1}"* ]]; then
+				match="yes"
+			fi
+		else
+			if [[ "$needle" == "$e" ]]; then
+				match="yes"
+			fi
+		fi
+	done
+
+	echo "$match"
 }
 
 function command_upgrade {
-	upgrade_type="${1:-"patch"}"
-	interactive="${2:-""}"
-	header_found=0
+	local SELECT_UPGRADE_TYPE="$1"
+	local SELECT_PACKAGE_TYPE="$2"
+	local DEBUG="$3"
+	local CONFIRM="$4"
+	local EXCLUDES="$5"
+	local INCLUDES="$6"
+	local HEADER_FOUND=0
+	local UPGRADE_TYPE
 
 	yarn outdated | while read -r line; do
 		if [[ 'PackageCurrentWantedLatestPackageTypeURL' == "${line//[[:blank:]]/}" ]]; then
-			header_found=1
+			HEADER_FOUND=1
 			continue
 		fi
 
-		if [[ $header_found -ne 1 ]]; then
+		if [[ $HEADER_FOUND -ne 1 ]]; then
 			continue
 		fi
 
@@ -450,57 +509,199 @@ function command_upgrade {
 			continue
 		fi
 
-		package="${parts[0]}"
-		current_version="${parts[1]}"
-		latest_version="${parts[3]}"
-		package_type="${parts[4]}"
+		local PACKAGE_NAME="${parts[0]}"
+		local CURRENT_VERSION="${parts[1]}"
+		local TARGET_VERSION="${parts[3]}"
+		local PACKAGE_TYPE="${parts[4]}"
 
-		if [[ "$current_version" =~ $SEMVER_REGEX ]] && [[ "$latest_version" =~ $SEMVER_REGEX ]]; then
-			diff_type=$(command_diff "$current_version" "$latest_version")
+		if [ "$SELECT_PACKAGE_TYPE" != "all" ] && [ "$PACKAGE_TYPE" != "$SELECT_PACKAGE_TYPE" ]; then
+			echo -e "${color_red}✗${color_clear} Skipping upgrade for ${color_green}${PACKAGE_NAME}${color_clear}. Package type is not match: ${color_green}${PACKAGE_TYPE}${color_clear}"
+			continue
+		fi
 
-			if [ "$diff_type" == "$upgrade_type" ]; then
-				upgrade_text "$package" "$current_version" "$latest_version"
+		if [[ -n $EXCLUDES ]]; then
+			match=$(match_pattern "$PACKAGE_NAME" "${EXCLUDES}")
 
-				package_json="$(pwd)/package.json"
-				echo -e "➤ Package.json    : ${color_green}${package_json}${color_clear}"
-				echo -e "➤ Package Type    : ${color_green}${package_type}${color_clear}"
-				echo -e "➤ Upgrade Command : ${color_green}yarn upgrade ""${package}"@"${latest_version}""${color_clear}"
-
-				if [[ "$interactive" == "--interactive" || "$interactive" == "-i" ]]; then
-					echo
-					read -r -u 2 -p "Do you want to proceed? (yes/no) " yn
-
-					case $yn in
-					yes | y)
-						echo "➤ Proceeding..."
-						;;
-					no | n)
-						echo "➤ Skipping..."
-						continue
-						;;
-					*)
-						echo "➤ Invalid response! Exiting..."
-						exit 1
-						;;
-					esac
-				fi
-
-				yarn upgrade "${package}@${latest_version}"
+			if [ "$match" == "yes" ]; then
+				echo -e "${color_red}✗${color_clear} Skipping upgrade for ${color_green}${PACKAGE_NAME}${color_clear}. Package is listed in exclude list: ${color_green}${EXCLUDES}${color_clear}"
+				continue
 			fi
+		fi
+
+		if [[ -n $INCLUDES ]]; then
+			match=$(match_pattern "$PACKAGE_NAME" "${INCLUDES}")
+
+			if [ "$match" != "yes" ]; then
+				echo -e "${color_red}✗${color_clear} Skipping upgrade for ${color_green}${PACKAGE_NAME}${color_clear}. Package is not listed in include list: ${color_green}${INCLUDES}${color_clear}"
+				continue
+			fi
+		fi
+
+		if [ "$CONFIRM" == "yes" ]; then
+			echo
+			read -r -u 2 -p "Press ENTER key to upgrade $PACKAGE_NAME package to version $TARGET_VERSION or input the version manually: " CUSTOM_VERSION
+
+			TARGET_VERSION=${CUSTOM_VERSION:-"$TARGET_VERSION"}
+		fi
+
+		if ! [[ "$CURRENT_VERSION" =~ $SEMVER_REGEX ]]; then
+			echo -e "${color_red}✗${color_clear} Skipping upgrade for ${color_green}${PACKAGE_NAME}${color_clear}. Package current version is invalid: ${color_green}${CURRENT_VERSION}${color_clear}"
+			continue
+		fi
+
+		if ! [[ "$TARGET_VERSION" =~ $SEMVER_REGEX ]]; then
+			echo -e "${color_red}✗${color_clear} Skipping upgrade for ${color_green}${PACKAGE_NAME}${color_clear}. Package target version is invalid: ${color_green}${TARGET_VERSION}${color_clear}"
+			continue
+		fi
+
+		UPGRADE_TYPE=$(command_diff "$CURRENT_VERSION" "$TARGET_VERSION")
+
+		if [ "$SELECT_UPGRADE_TYPE" != "all" ] && [ "$UPGRADE_TYPE" != "$SELECT_UPGRADE_TYPE" ]; then
+			echo -e "${color_red}✗${color_clear} Skipping upgrade for ${color_green}${PACKAGE_NAME}${color_clear}. Upgrade type is not match: ${color_green}${UPGRADE_TYPE}${color_clear}"
+			continue
+		fi
+
+		if [ "$TARGET_VERSION" == "$CURRENT_VERSION" ]; then
+			echo -e "${color_red}✗${color_clear} Skipping upgrade for ${color_green}${PACKAGE_TYPE}${color_clear}. Package version is the same: ${color_green}${CURRENT_VERSION}${color_clear}"
+			continue
+		fi
+
+		echo -e "${color_green}✓${color_clear} Upgrading ${color_green}${PACKAGE_NAME}${color_clear} version ${color_green}${CURRENT_VERSION}${color_clear} to ${color_green}${TARGET_VERSION}${color_clear}"
+
+		if [ "$DEBUG" != "yes" ]; then
+			yarn upgrade "${PACKAGE_NAME}@${TARGET_VERSION}"
 		fi
 	done
 }
 
-case "${1:-''}" in
---help | -h)
-	echo -e "$USAGE"
-	exit 0
-	;;
-major | minor | patch | release | prerel | build)
-	command_upgrade "$@"
-	;;
-*)
-	echo "Unknown arguments: $*"
-	usage_help
-	;;
-esac
+run_command() {
+	local UPGRADE_TYPE_LIST=(major minor patch release prerel build all)
+	local PACKAGE_TYPE_LIST=(dependencies devDependencies all)
+	local CONFIRM_LIST=(yes no)
+	local DEBUG_LIST=(yes no)
+
+	local UPGRADE_TYPE="all"
+	local PACKAGE_TYPE="all"
+	local DEBUG="no"
+	local CONFIRM="no"
+	local WIZARD="no"
+	local EXCLUDES=""
+	local INCLUDES=""
+
+	while (("$#")); do
+		case $1 in
+		-h | --help)
+			usage_help
+			exit
+			;;
+
+		-w | --wizard)
+			WIZARD="yes"
+			shift
+			;;
+
+		-d | --debug)
+			DEBUG="yes"
+			shift
+			;;
+
+		-c | --confirm)
+			CONFIRM="yes"
+			shift
+			;;
+
+		-u | --upgrade_type)
+			UPGRADE_TYPE="$2"
+			shift 2
+			;;
+
+		-p | --package_type)
+			PACKAGE_TYPE="$2"
+			shift 2
+			;;
+
+		-e | --excludes)
+			EXCLUDES="$2"
+			shift 2
+			;;
+
+		-i | --includes)
+			INCLUDES="$2"
+			shift 2
+			;;
+
+		*)
+			echo "ERROR: Unknown parameter \"$1\""
+			usage_help
+			exit 1
+			;;
+		esac
+	done
+
+	# Upgrade Type
+	if ! [[ "${UPGRADE_TYPE_LIST[*]}" =~ $UPGRADE_TYPE ]] || [ $WIZARD == "yes" ]; then
+		echo "Upgrade type? "
+		select selected in "${UPGRADE_TYPE_LIST[@]}"; do
+			if [[ -n $selected ]]; then
+				UPGRADE_TYPE=$selected
+				break
+			fi
+		done
+	fi
+
+	# Package Type
+	if ! [[ "${PACKAGE_TYPE_LIST[*]}" =~ $PACKAGE_TYPE ]] || [ $WIZARD == "yes" ]; then
+		echo "Package type? "
+		select selected in "${PACKAGE_TYPE_LIST[@]}"; do
+			if [[ -n $selected ]]; then
+				PACKAGE_TYPE=$selected
+				break
+			fi
+		done
+	fi
+
+	# Confirm before upgrade
+	if ! [[ "${CONFIRM_LIST[*]}" =~ $CONFIRM ]] || [ $WIZARD == "yes" ]; then
+		echo "Confirm before upgrade? "
+		select selected in "${CONFIRM_LIST[@]}"; do
+			if [[ -n $selected ]]; then
+				CONFIRM=$selected
+				break
+			fi
+		done
+	fi
+
+	# Debug mode
+	if ! [[ "${DEBUG_LIST[*]}" =~ $DEBUG ]] || [ $WIZARD == "yes" ]; then
+		echo "Debug mode? "
+		select selected in "${DEBUG_LIST[@]}"; do
+			if [[ -n $selected ]]; then
+				DEBUG=$selected
+				break
+			fi
+		done
+	fi
+
+	# Excludes
+	if [ $WIZARD == "yes" ]; then
+		read -r -u 2 -p "Exclude upgrade for specified packages (separated by comma): " EXCLUDES
+	fi
+
+	if [ $WIZARD == "yes" ]; then
+		read -r -u 2 -p "Include upgrade for specified packages (separated by comma): " INCLUDES
+	fi
+
+	echo
+	echo -e "➤ Package.json           : $(pwd)/package.json"
+	echo -e "➤ Upgrade Type           : $UPGRADE_TYPE"
+	echo -e "➤ Package Type           : $PACKAGE_TYPE"
+	echo -e "➤ Debug Mode             : $DEBUG"
+	echo -e "➤ Confirm Before Upgrade : $CONFIRM"
+	echo -e "➤ Exclude Packages       : $EXCLUDES"
+	echo -e "➤ Include Packages       : $INCLUDES"
+	echo
+
+	command_upgrade "$UPGRADE_TYPE" "$PACKAGE_TYPE" "$DEBUG" "$CONFIRM" "$EXCLUDES" "$INCLUDES"
+}
+
+run_command "$@"
