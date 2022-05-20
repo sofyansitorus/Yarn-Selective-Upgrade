@@ -1,5 +1,5 @@
 # Yarn-Selective-Upgrade
-This allows selectively upgrading NPM packages grouped by upgrade type: major, minor, patch, release, prerel, build.
+This allows selectively upgrading NPM packages filtered by upgrade type, package type, includes list, exclude list.
 
 Installation
 -----
@@ -26,34 +26,14 @@ How to Use
 -----
 This command need to be run in your package.json directory.
 
-#### ➤ Major upgrade
+#### ➤ Default mode
 ```bash
-yarn-selective-upgrade major
+yarn-selective-upgrade
 ```
 
-#### ➤ Minor upgrade
+#### ➤ Wizard mode
 ```bash
-yarn-selective-upgrade minor
-```
-
-#### ➤ Patch upgrade
-```bash
-yarn-selective-upgrade patch
-```
-
-#### ➤ Interactive mode
-```bash
-yarn-selective-upgrade major -i
-```
-
-```bash
-yarn-selective-upgrade major --interactive
-```
-
-#### ➤ Recursive
-
-```bash
-find ./ -name node_modules -prune -o -name package.json -execdir yarn-selective-upgrade major -i \;
+yarn-selective-upgrade -w
 ```
 
 # Credits
